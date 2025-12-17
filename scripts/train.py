@@ -1,20 +1,28 @@
 from pathlib import Path
 
 import logging
+import torch
 import pytorch_lightning as pl
 import hydra
 
 from pytorch_lightning.strategies.ddp import DDPStrategy
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from lightning_fabric.plugins.io.torch_io import TorchCheckpointIO
 
 from cross_view_transformer.common import setup_config, setup_experiment, load_backbone
 from cross_view_transformer.callbacks.gitdiff_callback import GitDiffCallback
 from cross_view_transformer.callbacks.visualization_callback import VisualizationCallback
 
 
+# Custom checkpoint IO to handle weights_only=False
+class CustomCheckpointIO(TorchCheckpointIO):
+    def load_checkpoint(self, path, map_location=None):
+        return torch.load(path, map_location=map_location, weights_only=False)
+
+
 log = logging.getLogger(__name__)
 
-CONFIG_PATH = Path.cwd() / 'config'
+CONFIG_PATH = str(Path.cwd() / 'config')  # Convert to string for Hydra 1.3+
 CONFIG_NAME = 'config.yaml'
 
 
@@ -32,11 +40,14 @@ def maybe_resume_training(experiment):
     return checkpoints[-1]
 
 
-@hydra.main(config_path=CONFIG_PATH, config_name=CONFIG_NAME)
+@hydra.main(version_base=None, config_path=CONFIG_PATH, config_name=CONFIG_NAME)
 def main(cfg):
     setup_config(cfg)
 
     pl.seed_everything(cfg.experiment.seed, workers=True)
+    
+    # Optimize Tensor Cores performance on RTX GPUs
+    torch.set_float32_matmul_precision('high')
 
     Path(cfg.experiment.save_dir).mkdir(exist_ok=True, parents=False)
 
@@ -66,7 +77,8 @@ def main(cfg):
     # Train
     trainer = pl.Trainer(logger=logger,
                          callbacks=callbacks,
-                         strategy=DDPStrategy(find_unused_parameters=False),
+                         strategy=DDPStrategy(find_unused_parameters=False, 
+                                            checkpoint_io=CustomCheckpointIO()),
                          **cfg.trainer)
     trainer.fit(model_module, datamodule=data_module, ckpt_path=ckpt_path)
 

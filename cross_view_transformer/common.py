@@ -59,7 +59,7 @@ def setup_experiment(cfg: DictConfig) -> Tuple[ModelModule, DataModule, Callable
 
 
 def load_backbone(checkpoint_path: str, prefix: str = 'backbone'):
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, weights_only=False)
 
     cfg = DictConfig(checkpoint['hyper_parameters'])
 

@@ -35,7 +35,11 @@ def main(cfg):
         img = np.vstack(viz(batch))
 
         cv2.imshow('debug', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-        cv2.waitKey(1)
+        key = cv2.waitKey(0)  # 0 = wait for key press, 1 = 1ms delay
+        
+        # Press 'q' or ESC to quit
+        if key == ord('q') or key == 27:
+            break
 
 
 if __name__ == '__main__':

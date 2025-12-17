@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  cvt-train:
+    image: cvt-rtx5090:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cvt-training
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - WANDB_API_KEY=c7ff04049d5cd781e688f17ab60ada654f9323e3
+      - PYTHONPATH=/workspace
+    volumes:
+      - ./:/workspace
+      - ./datasets:/workspace/datasets
+      - ./logs:/workspace/logs
+      - ./outputs:/workspace/outputs
+    working_dir: /workspace
+    shm_size: '16gb'
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

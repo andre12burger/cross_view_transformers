@@ -6,7 +6,12 @@ from typing import Any, Optional
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from pytorch_lightning.loggers.wandb import WandbLogger
 from pytorch_lightning.utilities import rank_zero_only
-from pytorch_lightning.utilities.warnings import rank_zero_warn
+
+# Compatibilidade com diferentes versões do PyTorch Lightning
+try:
+    from pytorch_lightning.utilities.warnings import rank_zero_warn
+except ImportError:
+    from pytorch_lightning.utilities import rank_zero_warn
 
 
 class VisualizationCallback(pl.Callback):
@@ -48,9 +53,11 @@ class VisualizationCallback(pl.Callback):
             self._log_image(viz(**outputs), f'{prefix}/{key}', trainer.logger)
 
     def _log_image(self, image_batch, tag, logger):
-        if isinstance(logger, torch.utils.tensorboard.writer.SummaryWriter):
-            logger.add_images(tag=tag, img_tensor=torch.from_numpy(image_batch), dataformats='NHWC')
-        elif isinstance(logger, WandbLogger):
+        # PyTorch Lightning 2.0+ usa WandbLogger ou TensorBoardLogger
+        if isinstance(logger, WandbLogger):
             logger.log_image(tag, image_batch)
+        elif hasattr(logger, 'experiment') and hasattr(logger.experiment, 'add_images'):
+            # TensorBoard logger
+            logger.experiment.add_images(tag=tag, img_tensor=torch.from_numpy(image_batch), dataformats='NHWC')
         else:
             rank_zero_warn(f'Invalid logger {logger}')

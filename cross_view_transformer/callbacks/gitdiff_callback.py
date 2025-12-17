@@ -31,7 +31,11 @@ class GitDiffCallback(pl.Callback):
 
     @rank_zero_only
     def on_fit_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
-        diff = git.Repo(PROJECT_ROOT).git.diff()
+        try:
+            diff = git.Repo(PROJECT_ROOT).git.diff()
+        except (git.exc.InvalidGitRepositoryError, git.exc.GitCommandError):
+            diff = "Not a git repository or git diff failed"
+        
         cfg = OmegaConf.to_yaml(self.cfg)
 
         log.info(TEMPLATE.format(diff=diff, cfg=cfg))

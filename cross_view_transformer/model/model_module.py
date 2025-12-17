@@ -49,7 +49,7 @@ class ModelModule(pl.LightningModule):
         self._log_epoch_metrics('train')
         self._enable_dataloader_shuffle(self.trainer.val_dataloaders)
 
-    def validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self):
         self._log_epoch_metrics('val')
 
     def _log_epoch_metrics(self, prefix: str):
@@ -78,9 +78,14 @@ class ModelModule(pl.LightningModule):
         """
         HACK for https://github.com/PyTorchLightning/pytorch-lightning/issues/11054
         """
+        # Handle both dict and list/tuple of dataloaders
+        if isinstance(dataloaders, dict):
+            dataloaders = dataloaders.values()
+        
         for v in dataloaders:
-            v.sampler.shuffle = True
-            v.sampler.set_epoch(self.current_epoch)
+            if hasattr(v, 'sampler') and hasattr(v.sampler, 'shuffle'):
+                v.sampler.shuffle = True
+                v.sampler.set_epoch(self.current_epoch)
 
     def configure_optimizers(self, disable_scheduler=False):
         parameters = [x for x in self.backbone.parameters() if x.requires_grad]

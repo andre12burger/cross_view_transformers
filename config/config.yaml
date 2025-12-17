@@ -34,15 +34,17 @@ scheduler:
   pct_start: 0.3                                      # reaches lr at 30% of total steps
   final_div_factor: 10                                # ends at lr / 10 / 10
   max_lr: ${optimizer.lr}
-  total_steps: ${trainer.max_steps}
+  total_steps: 210990                                 # 30 epochs * ~7033 steps/epoch
   cycle_momentum: False
 
 # lightning trainer
 trainer:
-  max_steps: 30001
+  max_epochs: 30
   log_every_n_steps: 50
 
-  gpus: -1
+  # PyTorch Lightning 2.0+ syntax
+  accelerator: gpu
+  devices: -1  # Use all available GPUs
   precision: 32
 
   limit_train_batches: 1.0
